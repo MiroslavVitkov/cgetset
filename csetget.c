@@ -1,3 +1,13 @@
+/*
+ * ----------------------------------------------------------------------------
+ * "THE BEER-WARE LICENSE" (Revision 42):
+ * <sir.vorac@gmail.com> wrote this file. As long as you retain this notice you
+ * can do whatever you want with this stuff. If we meet some day, and you think
+ * this stuff is worth it, you can buy me a beer in return. 
+ * Miroslav Vitkov 2013
+ * ----------------------------------------------------------------------------
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,13 +40,18 @@ int generate(const char *const type, const char *const var, const char *const fn
 //As writing to output files is in append mode, this function deletes them, if existing, at program startup.
 int clearOutputFiles(const char *const fnameOut);
 
-//argv[1] == dir_templates
-//argv[2] == file_input
 int main(int argc, char **argv){
+	if(argc != 3){
+		printf("usage: cgetset <input file> <templates folder>\n");
+		exit(-1);
+	}
+
 	//Configuration
-	char fnameIn[PATH_TO_FILE_LENGTH_MAX] = "kur";
-	char dirTemplates[PATH_TO_FILE_LENGTH_MAX] = "templates";
-	char fnameOut[PATH_TO_FILE_LENGTH_MAX] = "kurzvezda";
+	char fnameIn[PATH_TO_FILE_LENGTH_MAX];
+	memcpy(fnameIn, argv[1], strlen(argv[1]));
+	char dirTemplates[PATH_TO_FILE_LENGTH_MAX];
+	memcpy(dirTemplates, argv[2], strlen(argv[2]));
+	char fnameOut[PATH_TO_FILE_LENGTH_MAX] = "out";
 	char delimit[] = ", };\t";				//important config constant
 
 	//Other declarations
@@ -170,6 +185,7 @@ int getword(char **line, char *const word, const char *const delimit){
 //On successs, opens $(fnameOut) for appending. Reads characters from the infile one by one. If "@" is encountered, it is
 //exchanged for $output file.
 int generate(const char *const type, const char *const var, const char *const fnameOut, const char *const dirTemplates){
+	//open outfiles
 	char fnameH[PATH_TO_FILE_LENGTH_MAX + 2];
 	memcpy(fnameH, fnameOut, PATH_TO_FILE_LENGTH_MAX);
 	strcat(fnameH, ".h");
@@ -188,16 +204,48 @@ int generate(const char *const type, const char *const var, const char *const fn
 		return(-1);
 	}
 	
-	//write content to outfiles
+	//search for a template file
 	char fnameTarget[PATH_TO_FILE_LENGTH_MAX];
 	memcpy(fnameTarget, dirTemplates, PATH_TO_FILE_LENGTH_MAX);
-	if(strlen(fnameTarget) + strlen(var) > PATH_TO_FILE_LENGTH_MAX){
+	if(strlen(fnameTarget) + strlen(var) + 1 > PATH_TO_FILE_LENGTH_MAX){
 		return -1;	//buffer overflow  would result
 	}
-	strcat(fnameTarget, var);
+	strcat(fnameTarget, "\\");
+	strcat(fnameTarget, type);
 	
+	char fnameTargetDefault[PATH_TO_FILE_LENGTH_MAX];
+	memcpy(fnameTargetDefault, dirTemplates, PATH_TO_FILE_LENGTH_MAX);
+	if(strlen(fnameTargetDefault) + strlen("default") + 1 > PATH_TO_FILE_LENGTH_MAX){
+		return -1;	//buffer overflow  would result
+	}
+	strcat(fnameTargetDefault, "\\");
+	strcat(fnameTargetDefault, "default");
+	
+	FILE *fileTarg = fopen(fnameTarget, "r");
+	if(fileTarg == NULL){
+		fileTarg = fopen(fnameTargetDefault, "r");
+		if(fileTarg == NULL){
+			return -1;
+		}
+	}
+	
+	//pipe content to outfiles
 	fprintf(fileH, "%s %s;\n", type, var);
-	fprintf(fileC, "%s %s = 0;\n", type, var);
+	//fprintf(fileC, "%s %s = 0;\n", type, var);
+	do{
+		char c;
+		c = fgetc(fileTarg);
+		if(c == EOF){
+			break;
+		} else if(c == '@'){
+			for(const char *it = var; *it != '\0'; it++){
+				fputc((int)*it, fileC);
+			}
+		} else{
+			fputc(c, fileC);
+		}
+	}while(FOREVER);
+	fputc((int)LINE_DELIMIT, fileC);
 	
 	//clean up
 	fclose(fileC); fclose(fileH);

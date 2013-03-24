@@ -1,0 +1,14 @@
+cgetset - a small utility for automatic setter/getter functions generation.
+
+The program parses a text file of variable declarations. As of now, nearly no grammar is supported 
+- no unions, structs, bitfields, let alone classes and other c++ complications.
+
+The use is as follows:
+cgetset <input file> <templates folder>
+
+The program searches in the templates folder for fiels with names, matching those of the declared types 
+e.g. "int". Then it simply appends the file to the output file. 
+
+If a matching template file is not found, "default" is searched. If that is also not found, the program crashes.
+
+'@' characters, encountered in the template file, are exchanged for the current variable's name.

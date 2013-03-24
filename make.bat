@@ -8,7 +8,7 @@ DEL csetget.exe
 
 @ECHO:
 @ECHO Execute
-csetget.exe
+csetget.exe example.txt templates
 
 @ECHO:
 @PAUSE
