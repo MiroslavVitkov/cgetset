@@ -1,4 +1,4 @@
-@SET DIR_TCC="..\tcc"
+@SET DIR_TCC=".\tcc"
 
 DEL csetget.exe
 
