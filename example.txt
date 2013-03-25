@@ -1,0 +1,2 @@
+int glava,    EVERest,		green;
+char zimbabve   ,	tangent,arccos;

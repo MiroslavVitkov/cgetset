@@ -28,12 +28,14 @@ int getline(FILE *const fileIn, char *const line);
 //Return value: word length, not counting terminating \0
 int getword(char **line, char *const word, const char* const delimit); 
 
-//Attempts to open $(dirTemplates)/$(type). On failure, try to open $(dirTemplates)/default.
+//Attempts to open $(dirTemplates)/$(type).c and $(dirTemplates)/$(type).c. 
+//If either fail, try to open $(dirTemplates)/default.c and $(dirTemplates)/default.c.
 //On failure, returns a negative value (error).
 //On successs, creates/overwrites $(fnameOut).h and $(fnameOut).c for appending. 
-//Only variable declarations are written to (fnameOut).h, one variable per line;
-//For $(fnameOut).c, characters are read from $(dirTemplates)/$(type) (or $(dirTemplates)/default) one by one.
+//Variable declarations are written to (fnameOut).c, one variable per line;
+//For $(fnameOut).c, characters are read from $(dirTemplates)/$(type).c (or $(dirTemplates)/default.c) one by one.
 //If "@" is encountered, it is exchanged for $(var). Characters are appended to $(fnameOut).c. 
+//Analogously for $(fnameOut).h.
 //Return value is 0.
 int generate(const char *const type, const char *const var, const char *const fnameOut, const char *const dirTemplates);
 
@@ -204,37 +206,80 @@ int generate(const char *const type, const char *const var, const char *const fn
 		return(-1);
 	}
 	
-	//search for a template file
-	char fnameTarget[PATH_TO_FILE_LENGTH_MAX];
-	memcpy(fnameTarget, dirTemplates, PATH_TO_FILE_LENGTH_MAX);
-	if(strlen(fnameTarget) + strlen(var) + 1 > PATH_TO_FILE_LENGTH_MAX){
+	//search for a template file pair
+	//H template file
+	char fnameTargetH[PATH_TO_FILE_LENGTH_MAX];
+	memcpy(fnameTargetH, dirTemplates, PATH_TO_FILE_LENGTH_MAX);
+	if(strlen(fnameTargetH) + strlen(var) + 3 > PATH_TO_FILE_LENGTH_MAX){
+		return -1;	//buffer overflow  would result in subsequenc strcat()
+	}
+	strcat(fnameTargetH, "\\");
+	strcat(fnameTargetH, type);
+	strcat(fnameTargetH, ".h");
+	
+	char fnameTargetDefaultH[PATH_TO_FILE_LENGTH_MAX];
+	memcpy(fnameTargetDefaultH, dirTemplates, PATH_TO_FILE_LENGTH_MAX);
+	if(strlen(fnameTargetDefaultH) + strlen("default.h") + 1 > PATH_TO_FILE_LENGTH_MAX){
 		return -1;	//buffer overflow  would result
 	}
-	strcat(fnameTarget, "\\");
-	strcat(fnameTarget, type);
+	strcat(fnameTargetDefaultH, "\\default.h");
 	
-	char fnameTargetDefault[PATH_TO_FILE_LENGTH_MAX];
-	memcpy(fnameTargetDefault, dirTemplates, PATH_TO_FILE_LENGTH_MAX);
-	if(strlen(fnameTargetDefault) + strlen("default") + 1 > PATH_TO_FILE_LENGTH_MAX){
-		return -1;	//buffer overflow  would result
-	}
-	strcat(fnameTargetDefault, "\\");
-	strcat(fnameTargetDefault, "default");
-	
-	FILE *fileTarg = fopen(fnameTarget, "r");
-	if(fileTarg == NULL){
-		fileTarg = fopen(fnameTargetDefault, "r");
-		if(fileTarg == NULL){
+	FILE *fileTargH = fopen(fnameTargetH, "r");
+	if(fileTargH == NULL){
+		fileTargH = fopen(fnameTargetDefaultH, "r");
+		if(fileTargH == NULL){
 			return -1;
 		}
 	}
 	
 	//pipe content to outfiles
-	fprintf(fileH, "%s %s;\n", type, var);
-	//fprintf(fileC, "%s %s = 0;\n", type, var);
+	// fprintf(fileH, "%s %s;\n", type, var);
 	do{
 		char c;
-		c = fgetc(fileTarg);
+		c = fgetc(fileTargH);
+		if(c == EOF){
+			break;
+		} else if(c == '@'){
+			for(const char *it = var; *it != '\0'; it++){
+				fputc((int)*it, fileH);
+			}
+		} else{
+			fputc(c, fileH);
+		}
+	}while(FOREVER);
+	fputc((int)LINE_DELIMIT, fileH);
+	fputc((int)LINE_DELIMIT, fileH);
+	
+	//C template file
+	char fnameTargetC[PATH_TO_FILE_LENGTH_MAX];
+	memcpy(fnameTargetC, dirTemplates, PATH_TO_FILE_LENGTH_MAX);
+	if(strlen(fnameTargetC) + strlen(var) + 3 > PATH_TO_FILE_LENGTH_MAX){
+		return -1;	//buffer overflow  would result in subsequenc strcat()
+	}
+	strcat(fnameTargetC, "\\");
+	strcat(fnameTargetC, type);
+	strcat(fnameTargetC, ".c");
+	
+	char fnameTargetDefaultC[PATH_TO_FILE_LENGTH_MAX];
+	memcpy(fnameTargetDefaultC, dirTemplates, PATH_TO_FILE_LENGTH_MAX);
+	if(strlen(fnameTargetDefaultC) + strlen("default.c") + 1 > PATH_TO_FILE_LENGTH_MAX){
+		return -1;	//buffer overflow  would result
+	}
+	strcat(fnameTargetDefaultC, "\\default.c");
+	
+	FILE *fileTargC = fopen(fnameTargetC, "r");
+	if(fileTargC == NULL){
+		fileTargC = fopen(fnameTargetDefaultC, "r");
+		if(fileTargC == NULL){
+			return -1;
+		}
+	}
+	
+	//pipe content to outfiles
+	// fprintf(fileC, "%s %s;\n", type, var);
+	do{
+		char c;
+		c = fgetc(fileTargC);
 		if(c == EOF){
 			break;
 		} else if(c == '@'){
@@ -246,9 +291,11 @@ int generate(const char *const type, const char *const var, const char *const fn
 		}
 	}while(FOREVER);
 	fputc((int)LINE_DELIMIT, fileC);
+	fputc((int)LINE_DELIMIT, fileC);
 	
 	//clean up
-	fclose(fileC); fclose(fileH);
+	fclose(fileH); fclose(fileC);
+	fclose(fileTargH); fclose(fileTargC);
 }
 
 //As writing to output files is in append mode, this function deletes them, if existing, at program startup.

@@ -1,0 +1,1 @@
+void declareununknownfunction(void);

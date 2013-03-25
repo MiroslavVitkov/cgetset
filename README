@@ -7,7 +7,7 @@ The use is as follows:
 cgetset <input file> <templates folder>
 
 The program searches in the templates folder for fiels with names, matching those of the declared types 
-e.g. "int". Then it simply appends the file to the output file. 
+e.g. "int.h" && "int.c". Then it simply appends the file to the corresponding output file. 
 
 If a matching template file is not found, "default" is searched. If that is also not found, the program crashes.
 
