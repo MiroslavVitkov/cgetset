@@ -1,1 +1,0 @@
-void declareastupidfunction(int @);

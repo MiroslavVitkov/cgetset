@@ -1,0 +1,1 @@
+#error "Type: $; Variable: @: No .c definition found"
